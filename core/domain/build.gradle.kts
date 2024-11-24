@@ -36,6 +36,7 @@ android {
 
 dependencies {
     implementation(libs.hilt.android)
+    testImplementation(libs.junit.jupiter)
     ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
 }
