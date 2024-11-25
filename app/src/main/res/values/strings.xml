@@ -5,4 +5,18 @@
     <string name="convert">Convert</string>
     <string name="sell">Sell</string>
     <string name="receive">Receive</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="confirm">Confirm</string>
+    <string name="warning">Warning</string>
+    <string name="dsc_are_you_sure_to_clear_user_data">Are you sure to clear user data?</string>
+    <string name="info">Info</string>
+    <string name="error">Error</string>
+    <string name="title_currency_converted">Currency converted</string>
+    <string name="dsc_currency_converted_short">You have converted %1$.2f %2$s to %3$.2f %4$s.</string>
+    <string name="dsc_currency_converted">You have converted %1$.2f %2$s to %3$.2f %4$s. CommissionFee: %5$.2f %6$s.</string>
+    <string name="not_supported_error">Not supported error</string>
+    <string name="tip_sold_with_commission">-%1$.2f %2$s. Commission: %3$.2f %4$s</string>
+    <string name="tip_sold">-%1$.2f %2$s</string>
+    <string name="tip_bought">+%1$.2f %2$s</string>
+    <string name="error_missed_information">Missed Information</string>
 </resources>

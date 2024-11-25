@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +32,8 @@ fun CurrencyItemCard(currency: String, balance: Double, action: (String) -> Unit
             .clickable { action(currency) }
             .padding(
                 10.dp,
-            ),
+            )
+            .defaultMinSize(minWidth = 100.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = currency,
@@ -41,7 +43,7 @@ fun CurrencyItemCard(currency: String, balance: Double, action: (String) -> Unit
             )
 
             Text(
-                text = format("%.2f",balance),
+                text = format("%.2f", balance),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 style = MaterialTheme.typography.headlineSmall

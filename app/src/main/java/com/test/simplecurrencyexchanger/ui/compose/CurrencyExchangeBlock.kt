@@ -21,6 +21,8 @@ import com.test.simplecurrencyexchanger.ui.compose.textfields.SimpleDebouncingOu
 fun CurrencyExchangeBlock(
     fromCurrency: String = "EUR",
     availableCurrencies: List<String>,
+    tipSold: String? = null,
+    tipBought: String? = null,
     onAmountChanged: (Double) -> Unit,
     onCurrencyTypeChanged: (String) -> Unit
 ) {
@@ -34,7 +36,7 @@ fun CurrencyExchangeBlock(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Tips ")
+            if (!tipSold.isNullOrEmpty()) Text(tipSold)
             SimpleDebouncingOutlinedTextField(onInputChanged = onAmountChanged)
             Text(fromCurrency)
         }
@@ -44,14 +46,12 @@ fun CurrencyExchangeBlock(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Tips ")
+            if (!tipBought.isNullOrEmpty()) Text(tipBought)
             if (availableCurrencies.isNotEmpty()) DropDownMenuBoxOutlined(
                 availableCurrencies,
                 onItemSelected = onCurrencyTypeChanged,
             )
             Text(fromCurrency)
         }
-
     }
-
 }

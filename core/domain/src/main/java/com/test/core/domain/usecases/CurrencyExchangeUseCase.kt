@@ -41,9 +41,10 @@ class CurrencyExchangeUseCase @Inject constructor(
             )
         } else {
             CurrencyExchangeResult.Failed(
-                expectedValue = calculation.fromValue,
-                actualValue = userBalance,
-                currency = fromCurrency
+                fromCurrency =
+                fromCurrency, fromCurrencyValue = calculation.fromValue,
+                toCurrency = toCurrency, toCurrencyValue = calculation.toValue,
+                commission = calculation.commissionValue
             )
         }
     }

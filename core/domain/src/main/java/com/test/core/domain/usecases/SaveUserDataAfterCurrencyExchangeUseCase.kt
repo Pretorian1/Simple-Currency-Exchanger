@@ -33,7 +33,8 @@ fun prepareUserData(
     val exchangeCounter = userData.exchangeCounter.inc()
     val balance = userData.balance.toMutableMap()
     balance[fromCurrency] = balance[fromCurrency]!!.minus(fromCurrencyValue)
-    balance[toCurrency] = balance[toCurrency]!!.plus(toCurrencyValue)
+    balance[toCurrency] =
+        if (balance.containsKey(toCurrency)) balance[toCurrency]!!.plus(toCurrencyValue) else toCurrencyValue
     return userData.copy(
         exchangeCounter = exchangeCounter,
         balance = balance

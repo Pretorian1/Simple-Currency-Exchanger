@@ -6,7 +6,7 @@ import javax.inject.Inject
 
 private const val INITIALIZATION_BALANCE = 1000.0
 
-class GetUserDataUseCase @Inject constructor(private val repo: AppPreferenceRepository) {
+class GetUserDataOrItFirstInitializationUseCase @Inject constructor(private val repo: AppPreferenceRepository) {
 
     suspend operator fun invoke(baseCurrency: String) =
         repo.getUserData() ?: firstUserDataInitialization(baseCurrency)

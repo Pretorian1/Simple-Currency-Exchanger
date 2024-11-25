@@ -13,6 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -47,11 +49,20 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
 
     val openAlertDialogForgotUserData = remember { mutableStateOf(false) }
     val openInfoDialog = remember { mutableStateOf(false) }
+    val openErrorDialog = remember { mutableStateOf(false) }
+
+    val dialogMessage = remember { mutableStateOf("") }
 
 
     LaunchedEffect(key1 = Unit) {
         viewModel.events.collectLatest {
-            handleEvent(it, openAlertDialogForgotUserData)
+            handleEvent(
+                event = it,
+                alertDialogMutableState = openAlertDialogForgotUserData,
+                infoDialogMutableState = openInfoDialog,
+                errorDialogMutableState = openErrorDialog,
+                messageMutableState = dialogMessage
+            )
         }
     }
     if (openAlertDialogForgotUserData.value) {
@@ -61,36 +72,56 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
                 viewModel.forgetUserData()
                 openAlertDialogForgotUserData.value = false
             },
-            dialogTitle = " Title",
-            dialogText = "Description"
+            dialogTitle = stringResource(R.string.warning),
+            dialogText = stringResource(R.string.dsc_are_you_sure_to_clear_user_data),
+            icon = Icons.Default.Warning
         )
     }
 
-    Scaffold(modifier = Modifier.fillMaxSize(),
-        topBar = {
-            SimpleTopBar(
-                title = { Text(stringResource(R.string.title_currency_exchange)) },
-                actions = {
-                    IconButton(onClick = {
-                        viewModel.onForgetUserDataClicked()
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            //  tint = MaterialTheme.colorScheme.onPrimary,
-                            contentDescription = "Settings"
-                        )
-                    }
-                })
-        }
-    ) { innerPadding ->
+    if (openInfoDialog.value) {
+        SimpleAlertDialog(
+            onDismissRequest = { openInfoDialog.value = false },
+            onConfirmation = {},
+            confirmationButtonEnable = false,
+            dialogTitle = stringResource(R.string.info),
+            dialogText = if (dialogMessage.value.isEmpty()) stringResource(R.string.error_missed_information)
+            else dialogMessage.value,
+            icon = Icons.Default.Info
+        )
+    }
+
+    if (openErrorDialog.value) {
+        SimpleAlertDialog(
+            onDismissRequest = { openErrorDialog.value = false },
+            onConfirmation = {},
+            confirmationButtonEnable = false,
+            dialogTitle = stringResource(R.string.error),
+            dialogText = if (dialogMessage.value.isEmpty()) stringResource(R.string.error_missed_information)
+            else dialogMessage.value,
+            icon = Icons.Default.Warning
+        )
+    }
+
+    Scaffold(modifier = Modifier.fillMaxSize(), topBar = {
+        SimpleTopBar(title = { Text(stringResource(R.string.title_currency_exchange)) }, actions = {
+            IconButton(onClick = {
+                viewModel.onForgetUserDataClicked()
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    //  tint = MaterialTheme.colorScheme.onPrimary,
+                    contentDescription = "Settings"
+                )
+            }
+        })
+    }) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(16.dp)
                 .verticalScroll(
                     rememberScrollState()
-                ),
-            verticalArrangement = Arrangement.SpaceBetween
+                ), verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = stringResource(R.string.title_your_balance)
@@ -103,8 +134,7 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(10.dp),
-            )
-            {
+            ) {
                 items(uiState.balanceItems) {
                     CurrencyItemCard(
                         currency = it.currency,
@@ -113,18 +143,25 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
                     )
                 }
             }
-            CurrencyExchangeBlock(
-                availableCurrencies = uiState.availableCurrenciesForExchanging,
-                onAmountChanged = viewModel::onCurrencyAmountChanged,
-                onCurrencyTypeChanged = viewModel::onCurrencyToByTypeChanged
-            )
+            if (!uiState.selectedCurrencyForSold.isNullOrEmpty()) {
+                CurrencyExchangeBlock(
+                    fromCurrency = uiState.selectedCurrencyForSold!!,
+                    availableCurrencies = uiState.availableCurrenciesForExchanging,
+                    tipSold = uiState.possibleSoldTip,
+                    tipBought = uiState.possibleBoughtTip,
+                    onAmountChanged = viewModel::onCurrencyAmountChanged,
+                    onCurrencyTypeChanged = viewModel::onCurrencyToByTypeChanged
+                )
+            }
             FilledTonalButton(
                 modifier = Modifier
                     .fillMaxWidth(.8f)
                     .align(Alignment.CenterHorizontally),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimaryContainer),
                 enabled = uiState.exchangeEnabled,
-                onClick = { },
+                onClick = {
+                    viewModel.saveUserData()
+                },
 
                 ) {
                 Text(stringResource(R.string.convert))
@@ -139,13 +176,22 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
 
 fun handleEvent(
     event: ExchangeCurrencyContract.Event,
-    alertDialogMutableState: MutableState<Boolean>
+    alertDialogMutableState: MutableState<Boolean>,
+    infoDialogMutableState: MutableState<Boolean>,
+    errorDialogMutableState: MutableState<Boolean>,
+    messageMutableState: MutableState<String>
 ) {
     when (event) {
+        is ExchangeCurrencyContract.Event.ShowInfo -> {
+            messageMutableState.value = event.message
+            infoDialogMutableState.value = true
+        }
+
         ExchangeCurrencyContract.Event.ForgotUserData -> alertDialogMutableState.value = true
-        is ExchangeCurrencyContract.Event.ShowError -> {}
-
+        is ExchangeCurrencyContract.Event.ShowError -> {
+            messageMutableState.value = event.message
+            errorDialogMutableState.value = true
+        }
     }
-
 }
 

@@ -63,6 +63,8 @@ dependencies {
     implementation(libs.retrofit2)
     implementation(libs.retrofit2.gson.converter)
 
+    implementation(libs.leakcanary.android)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

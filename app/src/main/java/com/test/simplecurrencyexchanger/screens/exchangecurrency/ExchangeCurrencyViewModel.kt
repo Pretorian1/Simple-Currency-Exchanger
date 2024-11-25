@@ -1,14 +1,19 @@
 package com.test.simplecurrencyexchanger.screens.exchangecurrency
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.test.core.domain.models.CurrencyExchangeRates
+import com.test.core.domain.models.CurrencyExchangeResult
+import com.test.core.domain.models.UserData
 import com.test.core.domain.usecases.CurrencyExchangeUseCase
 import com.test.core.domain.usecases.ForgetUserDataUseCase
 import com.test.core.domain.usecases.GetCurrencyExchangeRatesUseCase
-import com.test.core.domain.usecases.GetUserDataUseCase
+import com.test.core.domain.usecases.GetUserDataOrItFirstInitializationUseCase
 import com.test.core.domain.usecases.SaveUserDataAfterCurrencyExchangeUseCase
+import com.test.simplecurrencyexchanger.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
@@ -25,14 +30,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import javax.inject.Inject
+import kotlin.concurrent.Volatile
 
 private const val ANR_TIMEOUT = 5000L
 private const val ONE_SECOND_IN_MILLISECONDS = 1000L
 
 @HiltViewModel
 class ExchangeCurrencyViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val getCurrencyExchangeRatesUseCase: GetCurrencyExchangeRatesUseCase,
-    private val getUserDataUseCase: GetUserDataUseCase,
+    private val getUserDataUseCase: GetUserDataOrItFirstInitializationUseCase,
     private val currencyExchangeUseCase: CurrencyExchangeUseCase,
     private val saveUserDataAfterCurrencyExchangeUseCase: SaveUserDataAfterCurrencyExchangeUseCase,
     private val forgetUserDataUseCase: ForgetUserDataUseCase
@@ -59,10 +66,24 @@ class ExchangeCurrencyViewModel @Inject constructor(
     private var selectedCurrencyForBuy: String? = null
     private var selectedAmountForSold: Double? = null
 
+    @Volatile
     private var currencyExchangeRates: CurrencyExchangeRates? = null
+        set(value) = synchronized(this) {
+            field = value
+        }
+        get() = synchronized(this) {
+            return@synchronized field
+        }
+    private var userData: UserData? = null
+    private var intermediateCurrencyExchangeState: CurrencyExchangeResult.Success? = null
 
 
     fun onCurrencyBalanceClicked(currency: String) {
+        viewModelScope.launch {
+            _uiState.update { state ->
+                state.copy(selectedCurrencyForSold = currency)
+            }
+        }
         selectedCurrencyForSold = currency
         println(currency)
     }
@@ -74,8 +95,11 @@ class ExchangeCurrencyViewModel @Inject constructor(
     }
 
     fun onCurrencyToByTypeChanged(currency: String) {
-        selectedCurrencyForBuy = currency
-        println(currency)
+        viewModelScope.launch(Dispatchers.IO) {
+            selectedCurrencyForBuy = currency
+            calculateExchange()
+            println(currency)
+        }
     }
 
     fun onForgetUserDataClicked() {
@@ -84,27 +108,75 @@ class ExchangeCurrencyViewModel @Inject constructor(
         }
     }
 
-    fun forgetUserData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { state ->
-                state.copy(isLoading = true)
-            }
-            try {
-                forgetUserDataUseCase()
-                firstUserDataInitialization()
-                selectedCurrencyForSold = null
-                selectedCurrencyForBuy = null
-            } finally {
-                _uiState.update { state ->
-                    state.copy(isLoading = false)
+    fun saveUserData() {
+        intermediateCurrencyExchangeState?.let {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    _uiState.update { state ->
+                        state.copy(isLoading = true)
+                    }
+                    saveUserDataAfterCurrencyExchangeUseCase(
+                        fromCurrency = it.fromCurrency,
+                        fromCurrencyValue = it.fromCurrencyValue,
+                        toCurrency = it.toCurrency,
+                        toCurrencyValue = it.toCurrencyValue
+                    )
+                    val user = getUserDataUseCase(currencyExchangeRates?.base!!)
+                    intermediateCurrencyExchangeState = null
+                    _uiState.update { state ->
+                        state.copy(
+                            balanceItems = user.balance.map {
+                                CurrencyBalance(
+                                    currency = it.key,
+                                    balance = it.value
+                                )
+                            },
+                            selectedCurrencyForSold = null,
+                            possibleSoldTip = null,
+                            possibleBoughtTip = null,
+                            exchangeEnabled = false
+                        )
+                    }
+                    _events.send(
+                        ExchangeCurrencyContract.Event.ShowInfo(
+                            message = if (it.commission == 0.0)
+                                context.getString(
+                                    R.string.dsc_currency_converted_short, it.fromCurrencyValue,
+                                    it.fromCurrency, it.toCurrencyValue, it.toCurrency
+                                )
+                            else
+                                context.getString(
+                                    R.string.dsc_currency_converted,
+                                    it.fromCurrencyValue,
+                                    it.fromCurrency,
+                                    it.toCurrencyValue,
+                                    it.toCurrency,
+                                    it.commission,
+                                    it.fromCurrency
+                                )
+                        )
+                    )
+                    intermediateCurrencyExchangeState = null
+                } catch (e: Exception) {
+                    _events.send(
+                        ExchangeCurrencyContract.Event.ShowError(
+                            message = e.message ?: context.getString(
+                                R.string.not_supported_error
+                            )
+                        )
+                    )
+                } finally {
+                    _uiState.update { state ->
+                        state.copy(isLoading = false)
+                    }
                 }
             }
         }
     }
 
-
     private suspend fun firstUserDataInitialization() {
         try {
+
             currencyExchangeRates = getCurrencyExchangeRatesUseCase()
             println(currencyExchangeRates)
             val user = getUserDataUseCase(currencyExchangeRates!!.base)
@@ -121,6 +193,13 @@ class ExchangeCurrencyViewModel @Inject constructor(
                 )
             }
         } catch (e: Exception) {
+            _events.send(
+                ExchangeCurrencyContract.Event.ShowError(
+                    message = e.message ?: context.getString(
+                        R.string.not_supported_error
+                    )
+                )
+            )
             println(e.message)
         } finally {
             _uiState.update { state -> state.copy(isLoading = false) }
@@ -132,27 +211,120 @@ class ExchangeCurrencyViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Default) {
             userInput.debounce(ONE_SECOND_IN_MILLISECONDS).distinctUntilChanged().collectLatest {
                 selectedAmountForSold = it
-                try {
-                    _uiState.update { state -> state.copy(isLoading = true) }
-                    if (selectedCurrencyForBuy != null && selectedCurrencyForSold != null
-                        && selectedAmountForSold != null && currencyExchangeRates != null
-                    ) {
-                        val result = currencyExchangeUseCase(
-                            fromCurrency = selectedCurrencyForSold!!,
-                            fromCurrencyValue = selectedAmountForSold!!,
-                            toCurrency = selectedCurrencyForBuy!!,
-                            currencyExchangeRates = currencyExchangeRates!!
+                calculateExchange()
+            }
+        }
+    }
+
+    private suspend fun calculateExchange() {
+        try {
+            _uiState.update { state -> state.copy(isLoading = true) }
+            if (selectedCurrencyForBuy != null && selectedCurrencyForSold != null
+                && selectedAmountForSold != null && currencyExchangeRates != null
+            ) {
+                val result = currencyExchangeUseCase(
+                    fromCurrency = selectedCurrencyForSold!!,
+                    fromCurrencyValue = selectedAmountForSold!!,
+                    toCurrency = selectedCurrencyForBuy!!,
+                    currencyExchangeRates = currencyExchangeRates!!
+                )
+                prepareResultFormCurrencyExchange(result)
+                if (result is CurrencyExchangeResult.Success)
+                    intermediateCurrencyExchangeState = result
+                println(result)
+            }
+
+        } catch (e: Exception) {
+            _events.send(
+                ExchangeCurrencyContract.Event.ShowError(
+                    message = e.message ?: context.getString(
+                        R.string.not_supported_error
+                    )
+                )
+            )
+        } finally {
+            _uiState.update { state -> state.copy(isLoading = false) }
+        }
+    }
+
+    fun forgetUserData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            /*  _uiState.update { state ->
+                  state.copy(isLoading = true)
+              }*/
+            try {
+                _uiState.update { ExchangeCurrencyContract.UIState() }
+                forgetUserDataUseCase()
+                firstUserDataInitialization()
+                selectedCurrencyForSold = null
+                selectedCurrencyForBuy = null
+                selectedAmountForSold = null
+            } catch (e: Exception) {
+                _events.send(
+                    ExchangeCurrencyContract.Event.ShowError(
+                        message = e.message ?: context.getString(
+                            R.string.not_supported_error
                         )
-                        println(result)
-                    }
-
-                } catch (e: Exception) {
-
-
-                } finally {
-                    _uiState.update { state -> state.copy(isLoading = false) }
+                    )
+                )
+            } finally {
+                _uiState.update { state ->
+                    state.copy(isLoading = false)
                 }
+            }
+        }
+    }
 
+    private fun prepareResultFormCurrencyExchange(data: CurrencyExchangeResult) {
+        when (data) {
+            is CurrencyExchangeResult.Success -> {
+                _uiState.update { state ->
+                    state.copy(
+                        possibleSoldTip = if (data.commission == 0.0) context.getString(
+                            R.string.tip_sold,
+                            data.fromCurrencyValue,
+                            data.fromCurrency
+                        ) else
+                            context.getString(
+                                R.string.tip_sold_with_commission,
+                                data.fromCurrencyValue,
+                                data.fromCurrency,
+                                data.commission,
+                                data.fromCurrency
+                            ),
+                        possibleBoughtTip = context.getString(
+                            R.string.tip_bought,
+                            data.toCurrencyValue,
+                            data.toCurrency
+                        ),
+                        exchangeEnabled = true
+                    )
+                }
+            }
+
+            is CurrencyExchangeResult.Failed -> {
+                _uiState.update { state ->
+                    state.copy(
+                        possibleSoldTip = if (data.commission == 0.0) context.getString(
+                            R.string.tip_sold,
+                            data.fromCurrencyValue,
+                            data.fromCurrency
+                        ) else
+                            context.getString(
+                                R.string.tip_sold_with_commission,
+                                data.fromCurrencyValue,
+                                data.fromCurrency,
+                                data.commission,
+                                data.fromCurrency
+                            ),
+                        possibleBoughtTip = context.getString(
+                            R.string.tip_bought,
+                            data.toCurrencyValue,
+                            data.toCurrency
+                        ),
+                        exchangeEnabled = false
+                    )
+                }
             }
         }
     }

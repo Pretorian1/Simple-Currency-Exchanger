@@ -1,23 +1,24 @@
 package com.test.simplecurrencyexchanger.dialogs
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun SimpleAlertDialog(
     onDismissRequest: () -> Unit,
     onConfirmation: () -> Unit,
+    confirmationButtonEnable: Boolean = true,
     dialogTitle: String,
     dialogText: String,
+    icon: ImageVector,
 ) {
     AlertDialog(
         icon = {
-            Icon(Icons.Default.Info, contentDescription = "Example Icon")
+            Icon(icon, contentDescription = "Icon")
         },
         title = {
             Text(text = dialogTitle)
@@ -29,13 +30,14 @@ fun SimpleAlertDialog(
             onDismissRequest()
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirmation()
+            if (confirmationButtonEnable)
+                TextButton(
+                    onClick = {
+                        onConfirmation()
+                    }
+                ) {
+                    Text("Confirm")
                 }
-            ) {
-                Text("Confirm")
-            }
         },
         dismissButton = {
             TextButton(
