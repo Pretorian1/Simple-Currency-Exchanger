@@ -4,8 +4,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -117,11 +119,12 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
     }) { innerPadding ->
         Column(
             modifier = Modifier
+                .fillMaxSize()
                 .padding(innerPadding)
                 .padding(16.dp)
                 .verticalScroll(
                     rememberScrollState()
-                ), verticalArrangement = Arrangement.SpaceBetween
+                ),
         ) {
             Text(
                 text = stringResource(R.string.title_your_balance)
@@ -153,6 +156,7 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
                     onCurrencyTypeChanged = viewModel::onCurrencyToByTypeChanged
                 )
             }
+            Spacer(Modifier.height(20.dp))
             FilledTonalButton(
                 modifier = Modifier
                     .fillMaxWidth(.8f)

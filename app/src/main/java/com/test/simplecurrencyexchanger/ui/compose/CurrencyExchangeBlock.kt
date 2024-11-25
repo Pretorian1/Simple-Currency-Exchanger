@@ -19,7 +19,7 @@ import com.test.simplecurrencyexchanger.ui.compose.textfields.SimpleDebouncingOu
 
 @Composable
 fun CurrencyExchangeBlock(
-    fromCurrency: String = "EUR",
+    fromCurrency: String,
     availableCurrencies: List<String>,
     tipSold: String? = null,
     tipBought: String? = null,
@@ -33,25 +33,32 @@ fun CurrencyExchangeBlock(
         Text(stringResource(R.string.sell))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!tipSold.isNullOrEmpty()) Text(tipSold)
-            SimpleDebouncingOutlinedTextField(onInputChanged = onAmountChanged)
-            Text(fromCurrency)
+            if (!tipSold.isNullOrEmpty()) Text(tipSold, modifier = Modifier.fillMaxWidth(.3f))
+            SimpleDebouncingOutlinedTextField(
+                modifier = Modifier.fillMaxWidth(.4f),
+                onInputChanged = onAmountChanged
+            )
+            Text(fromCurrency, modifier = Modifier.fillMaxWidth(.3f))
         }
+        Spacer(Modifier.height(5.dp))
+        HorizontalDivider(thickness = 1.dp)
         Text(stringResource(R.string.receive))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!tipBought.isNullOrEmpty()) Text(tipBought)
+            if (!tipBought.isNullOrEmpty()) Text(tipBought, modifier = Modifier.fillMaxWidth(.3f))
             if (availableCurrencies.isNotEmpty()) DropDownMenuBoxOutlined(
+                modifier = Modifier.fillMaxWidth(.5f),
                 availableCurrencies,
                 onItemSelected = onCurrencyTypeChanged,
             )
-            Text(fromCurrency)
         }
+        Spacer(Modifier.height(5.dp))
+        HorizontalDivider(thickness = 1.dp)
     }
 }

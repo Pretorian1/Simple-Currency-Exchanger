@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.test.core.domain.models.CurrencyExchangeRates
 import com.test.core.domain.models.CurrencyExchangeResult
-import com.test.core.domain.models.UserData
 import com.test.core.domain.usecases.CurrencyExchangeUseCase
 import com.test.core.domain.usecases.ForgetUserDataUseCase
 import com.test.core.domain.usecases.GetCurrencyExchangeRatesUseCase
@@ -62,9 +61,9 @@ class ExchangeCurrencyViewModel @Inject constructor(
     private val _events = Channel<ExchangeCurrencyContract.Event>()
     val events = _events.receiveAsFlow()
 
-    private var selectedCurrencyForSold: String? = null
+    private var selectedCurrencyForSell: String? = null
     private var selectedCurrencyForBuy: String? = null
-    private var selectedAmountForSold: Double? = null
+    private var selectedAmountForSell: Double? = null
 
     @Volatile
     private var currencyExchangeRates: CurrencyExchangeRates? = null
@@ -74,18 +73,25 @@ class ExchangeCurrencyViewModel @Inject constructor(
         get() = synchronized(this) {
             return@synchronized field
         }
-    private var userData: UserData? = null
+    private var availableCurrencies: List<String>? = null
     private var intermediateCurrencyExchangeState: CurrencyExchangeResult.Success? = null
 
 
     fun onCurrencyBalanceClicked(currency: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { state -> state.copy(isLoading = true) }
+            val currencies = availableCurrencies!!.filterNot { currency == it }
+            selectedCurrencyForSell = currency
+            println(currency)
             _uiState.update { state ->
-                state.copy(selectedCurrencyForSold = currency)
+                state.copy(
+                    selectedCurrencyForSold = currency,
+                    availableCurrenciesForExchanging = currencies
+                )
             }
+            calculateExchange()
         }
-        selectedCurrencyForSold = currency
-        println(currency)
+
     }
 
     fun onCurrencyAmountChanged(amount: Double) {
@@ -105,6 +111,38 @@ class ExchangeCurrencyViewModel @Inject constructor(
     fun onForgetUserDataClicked() {
         viewModelScope.launch {
             _events.send(ExchangeCurrencyContract.Event.ForgotUserData)
+        }
+    }
+
+    private suspend fun firstUserDataInitialization() {
+        try {
+            currencyExchangeRates = getCurrencyExchangeRatesUseCase()
+            println(currencyExchangeRates)
+            val user = getUserDataUseCase(currencyExchangeRates!!.base)
+            println(user)
+            availableCurrencies = currencyExchangeRates!!.rates.keys.toList()
+            _uiState.update { state ->
+                state.copy(
+                    balanceItems = user.balance.map {
+                        CurrencyBalance(
+                            currency = it.key,
+                            balance = it.value
+                        )
+                    },
+                    availableCurrenciesForExchanging = availableCurrencies!!
+                )
+            }
+        } catch (e: Exception) {
+            _events.send(
+                ExchangeCurrencyContract.Event.ShowError(
+                    message = e.message ?: context.getString(
+                        R.string.not_supported_error
+                    )
+                )
+            )
+            println(e.message)
+        } finally {
+            _uiState.update { state -> state.copy(isLoading = false) }
         }
     }
 
@@ -174,44 +212,23 @@ class ExchangeCurrencyViewModel @Inject constructor(
         }
     }
 
-    private suspend fun firstUserDataInitialization() {
-        try {
-
-            currencyExchangeRates = getCurrencyExchangeRatesUseCase()
-            println(currencyExchangeRates)
-            val user = getUserDataUseCase(currencyExchangeRates!!.base)
-            println(user)
-            _uiState.update { state ->
-                state.copy(
-                    balanceItems = user.balance.map {
-                        CurrencyBalance(
-                            currency = it.key,
-                            balance = it.value
-                        )
-                    },
-                    availableCurrenciesForExchanging = currencyExchangeRates!!.rates.keys.toList()
-                )
-            }
-        } catch (e: Exception) {
-            _events.send(
-                ExchangeCurrencyContract.Event.ShowError(
-                    message = e.message ?: context.getString(
-                        R.string.not_supported_error
-                    )
-                )
-            )
-            println(e.message)
-        } finally {
-            _uiState.update { state -> state.copy(isLoading = false) }
-        }
-    }
-
     @OptIn(FlowPreview::class)
     private fun collectCurrencyAmount() {
         viewModelScope.launch(Dispatchers.Default) {
             userInput.debounce(ONE_SECOND_IN_MILLISECONDS).distinctUntilChanged().collectLatest {
-                selectedAmountForSold = it
-                calculateExchange()
+                if (it != 0.0) {
+                    selectedAmountForSell = it
+                    calculateExchange()
+                } else {
+                    selectedAmountForSell = null
+                    _uiState.update { state ->
+                        state.copy(
+                            possibleSoldTip = null,
+                            possibleBoughtTip = null,
+                            exchangeEnabled = false
+                        )
+                    }
+                }
             }
         }
     }
@@ -219,12 +236,12 @@ class ExchangeCurrencyViewModel @Inject constructor(
     private suspend fun calculateExchange() {
         try {
             _uiState.update { state -> state.copy(isLoading = true) }
-            if (selectedCurrencyForBuy != null && selectedCurrencyForSold != null
-                && selectedAmountForSold != null && currencyExchangeRates != null
+            if (selectedCurrencyForBuy != null && selectedCurrencyForSell != null
+                && selectedAmountForSell != null && currencyExchangeRates != null
             ) {
                 val result = currencyExchangeUseCase(
-                    fromCurrency = selectedCurrencyForSold!!,
-                    fromCurrencyValue = selectedAmountForSold!!,
+                    fromCurrency = selectedCurrencyForSell!!,
+                    fromCurrencyValue = selectedAmountForSell!!,
                     toCurrency = selectedCurrencyForBuy!!,
                     currencyExchangeRates = currencyExchangeRates!!
                 )
@@ -249,16 +266,13 @@ class ExchangeCurrencyViewModel @Inject constructor(
 
     fun forgetUserData() {
         viewModelScope.launch(Dispatchers.IO) {
-            /*  _uiState.update { state ->
-                  state.copy(isLoading = true)
-              }*/
             try {
                 _uiState.update { ExchangeCurrencyContract.UIState() }
                 forgetUserDataUseCase()
                 firstUserDataInitialization()
-                selectedCurrencyForSold = null
+                selectedCurrencyForSell = null
                 selectedCurrencyForBuy = null
-                selectedAmountForSold = null
+                selectedAmountForSell = null
             } catch (e: Exception) {
                 _events.send(
                     ExchangeCurrencyContract.Event.ShowError(

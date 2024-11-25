@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DropDownMenuBoxOutlined(
+    modifier: Modifier = Modifier.fillMaxWidth(),
     items: List<String>,
     onItemSelected: (String) -> Unit = {},
     preselectedItemIndex: Int = 0,
@@ -28,6 +29,7 @@ fun DropDownMenuBoxOutlined(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var selectedText by remember { mutableStateOf(items[preselectedItemIndex]) }
+    onItemSelected(selectedText)
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -36,9 +38,8 @@ fun DropDownMenuBoxOutlined(
         }
     ) {
         OutlinedTextField(
-            modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                .fillMaxWidth(),
+            modifier = modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
             value = selectedText,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = containerColor,

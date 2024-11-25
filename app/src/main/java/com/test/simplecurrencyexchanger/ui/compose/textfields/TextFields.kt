@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SimpleDebouncingOutlinedTextField(
+    modifier: Modifier = Modifier.fillMaxWidth(),
     text: String = "",
     singleLine: Boolean = false,
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
@@ -28,8 +29,7 @@ fun SimpleDebouncingOutlinedTextField(
     var textState by remember { mutableStateOf(text) }
 
     OutlinedTextField(
-        modifier = Modifier
-            .fillMaxWidth(0.5f)
+        modifier = modifier
             .padding(2.dp),
         shape = MaterialTheme.shapes.medium,
         colors = TextFieldDefaults.colors(
