@@ -31,7 +31,8 @@ class CurrencyExchangeUseCase @Inject constructor(
             dataForCurrencyExchange.fromCurrencyRate
         )
         val calculation = dataForCurrencyExchange.calculateExchange(commission)
-        return if (calculation.fromValue < userData.balance[fromCurrency]!!) {
+        val userBalance = userData.balance[fromCurrency]!!
+        return if (calculation.fromValue < userBalance) {
             CurrencyExchangeResult.Success(
                 fromCurrency =
                 fromCurrency, fromCurrencyValue = calculation.fromValue,
@@ -39,7 +40,11 @@ class CurrencyExchangeUseCase @Inject constructor(
                 commission = calculation.commissionValue
             )
         } else {
-            CurrencyExchangeResult.Failed(expectedValue = calculation.fromValue)
+            CurrencyExchangeResult.Failed(
+                expectedValue = calculation.fromValue,
+                actualValue = userBalance,
+                currency = fromCurrency
+            )
         }
     }
 }

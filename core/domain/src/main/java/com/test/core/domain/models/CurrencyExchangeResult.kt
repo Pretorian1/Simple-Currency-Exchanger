@@ -10,6 +10,8 @@ sealed class CurrencyExchangeResult {
     ) : CurrencyExchangeResult()
 
     data class Failed(
-        val expectedValue: Double
+        val expectedValue: Double,
+        val actualValue: Double,
+        val currency: String
     ) : CurrencyExchangeResult()
 }
