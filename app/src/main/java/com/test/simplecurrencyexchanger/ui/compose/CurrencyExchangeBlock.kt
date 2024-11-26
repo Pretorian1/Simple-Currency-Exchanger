@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +35,7 @@ fun CurrencyExchangeBlock(
         Text(stringResource(R.string.title_currency_exchange))
         Spacer(Modifier.height(5.dp))
         HorizontalDivider(thickness = 1.dp)
-        Text(stringResource(R.string.sell))
+        Text(stringResource(R.string.sell_with_parameter, fromCurrency))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -44,13 +45,13 @@ fun CurrencyExchangeBlock(
                 text = tipSold, modifier = Modifier.fillMaxWidth(.3f),
                 color = if (isOperationSuccess) Silver else Cinnabar
             )
+            Spacer(Modifier.width(10.dp))
             SimpleDebouncingOutlinedTextField(
-                modifier = Modifier.fillMaxWidth(.4f),
+                modifier = Modifier.fillMaxWidth(.5f),
                 onInputChanged = onAmountChanged
             )
-            Text(fromCurrency, modifier = Modifier.fillMaxWidth(.3f))
         }
-        Spacer(Modifier.height(5.dp))
+        Spacer(Modifier.height(10.dp))
         HorizontalDivider(thickness = 1.dp)
         Text(stringResource(R.string.receive))
         Row(
@@ -62,13 +63,14 @@ fun CurrencyExchangeBlock(
                 tipBought, modifier = Modifier.fillMaxWidth(.3f),
                 color = if (isOperationSuccess) PaleGold else Cinnabar
             )
+            Spacer(Modifier.width(10.dp))
             if (availableCurrencies.isNotEmpty()) DropDownMenuBoxOutlined(
                 modifier = Modifier.fillMaxWidth(.5f),
                 availableCurrencies,
                 onItemSelected = onCurrencyTypeChanged,
             )
         }
-        Spacer(Modifier.height(5.dp))
+        Spacer(Modifier.height(10.dp))
         HorizontalDivider(thickness = 1.dp)
     }
 }

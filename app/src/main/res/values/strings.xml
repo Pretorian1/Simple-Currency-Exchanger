@@ -4,7 +4,8 @@
     <string name="title_currency_exchange">Currency Exchange</string>
     <string name="title_your_balance">Your balance</string>
     <string name="convert">Convert</string>
-    <string name="sell">Sell</string>
+    <string name="sell_with_parameter">Sell (%s)</string>
+
     <string name="receive">Receive</string>
     <string name="dismiss">Dismiss</string>
     <string name="confirm">Confirm</string>

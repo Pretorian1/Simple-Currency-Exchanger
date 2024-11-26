@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -160,7 +161,8 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
             FilledTonalButton(
                 modifier = Modifier
                     .fillMaxWidth(.8f)
-                    .align(Alignment.CenterHorizontally),
+                    .align(Alignment.CenterHorizontally)
+                    .defaultMinSize(minWidth = 50.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimaryContainer),
                 enabled = uiState.exchangeEnabled,
                 onClick = {
@@ -168,7 +170,10 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
                 },
 
                 ) {
-                Text(stringResource(R.string.convert))
+                Text(
+                    text = stringResource(R.string.convert),
+                    style = MaterialTheme.typography.titleLarge
+                )
             }
 
         }

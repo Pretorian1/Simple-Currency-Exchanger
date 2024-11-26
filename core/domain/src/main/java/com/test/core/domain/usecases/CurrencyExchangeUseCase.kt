@@ -57,7 +57,7 @@ fun calculateCommissionRate(
 ) =
     when {
         fromCurrencyValue / fromCurrencyRate > FREE_COMMISSION_FOR_BASE -> 0.0
-        exchangeCounter <= FIRST_COMMISSION_CHANGE -> 0.0
+        exchangeCounter < FIRST_COMMISSION_CHANGE -> 0.0
         exchangeCounter % EVERY_CONVERSION_FREE_VALUE == 0 -> 0.0
         else -> BASE_COMMISSION_IN_PERCENTS
     }

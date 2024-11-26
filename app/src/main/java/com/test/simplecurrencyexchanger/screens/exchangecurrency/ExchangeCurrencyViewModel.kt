@@ -127,6 +127,103 @@ class ExchangeCurrencyViewModel @Inject constructor(
         }
     }
 
+    fun saveUserData() {
+        intermediateCurrencyExchangeState?.let {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    _uiState.update { state ->
+                        state.copy(isLoading = true)
+                    }
+                    saveUserDataAfterCurrencyExchangeUseCase(
+                        fromCurrency = it.fromCurrency,
+                        fromCurrencyValue = it.fromCurrencyValue,
+                        toCurrency = it.toCurrency,
+                        toCurrencyValue = it.toCurrencyValue
+                    )
+                    val user = getUserDataUseCase(currencyExchangeRates?.base!!)
+                    intermediateCurrencyExchangeState = null
+                    selectedCurrencyForSell = null
+                    selectedCurrencyForBuy = null
+                    selectedAmountForSell = null
+                    _uiState.update { state ->
+                        state.copy(
+                            balanceItems = user.balance.map {
+                                CurrencyBalance(
+                                    currency = it.key,
+                                    balance = it.value
+                                )
+                            },
+                            selectedCurrencyForSold = null,
+                            possibleSoldTip = null,
+                            possibleBoughtTip = null,
+                            exchangeEnabled = false
+                        )
+                    }
+                    delay(ONE_SECOND_IN_MILLISECONDS)
+                    _events.send(
+                        ExchangeCurrencyContract.Event.ShowInfo(
+                            message = if (it.commission == 0.0)
+                                context.getString(
+                                    R.string.dsc_currency_converted_short, it.fromCurrencyValue,
+                                    it.fromCurrency, it.toCurrencyValue, it.toCurrency
+                                )
+                            else
+                                context.getString(
+                                    R.string.dsc_currency_converted,
+                                    it.fromCurrencyValue,
+                                    it.fromCurrency,
+                                    it.toCurrencyValue,
+                                    it.toCurrency,
+                                    it.commission,
+                                    it.fromCurrency
+                                )
+                        )
+                    )
+                } catch (e: Exception) {
+                    _events.send(
+                        ExchangeCurrencyContract.Event.ShowError(
+                            message = e.message ?: context.getString(
+                                R.string.not_supported_error
+                            )
+                        )
+                    )
+                } finally {
+                    _uiState.update { state ->
+                        state.copy(isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun forgetUserData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _uiState.update { ExchangeCurrencyContract.UIState(isLoading = true) }
+                forgetUserDataUseCase()
+                delay(ONE_SECOND_IN_MILLISECONDS)
+                firstUserDataInitialization()
+                intermediateCurrencyExchangeState = null
+                selectedCurrencyForSell = null
+                selectedCurrencyForBuy = null
+                selectedAmountForSell = null
+
+            } catch (e: Exception) {
+                _events.send(
+                    ExchangeCurrencyContract.Event.ShowError(
+                        message = e.message ?: context.getString(
+                            R.string.not_supported_error
+                        )
+                    )
+                )
+            } finally {
+                _uiState.update { state ->
+                    state.copy(isLoading = false)
+                }
+            }
+        }
+    }
+
     private suspend fun firstUserDataInitialization() {
         try {
             currencyExchangeRates = getCurrencyExchangeRatesUseCase()
@@ -156,72 +253,6 @@ class ExchangeCurrencyViewModel @Inject constructor(
             println(e.message)
         } finally {
             _uiState.update { state -> state.copy(isLoading = false) }
-        }
-    }
-
-    fun saveUserData() {
-        intermediateCurrencyExchangeState?.let {
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    _uiState.update { state ->
-                        state.copy(isLoading = true)
-                    }
-                    saveUserDataAfterCurrencyExchangeUseCase(
-                        fromCurrency = it.fromCurrency,
-                        fromCurrencyValue = it.fromCurrencyValue,
-                        toCurrency = it.toCurrency,
-                        toCurrencyValue = it.toCurrencyValue
-                    )
-                    val user = getUserDataUseCase(currencyExchangeRates?.base!!)
-                    intermediateCurrencyExchangeState = null
-                    _uiState.update { state ->
-                        state.copy(
-                            balanceItems = user.balance.map {
-                                CurrencyBalance(
-                                    currency = it.key,
-                                    balance = it.value
-                                )
-                            },
-                            selectedCurrencyForSold = null,
-                            possibleSoldTip = null,
-                            possibleBoughtTip = null,
-                            exchangeEnabled = false
-                        )
-                    }
-                    _events.send(
-                        ExchangeCurrencyContract.Event.ShowInfo(
-                            message = if (it.commission == 0.0)
-                                context.getString(
-                                    R.string.dsc_currency_converted_short, it.fromCurrencyValue,
-                                    it.fromCurrency, it.toCurrencyValue, it.toCurrency
-                                )
-                            else
-                                context.getString(
-                                    R.string.dsc_currency_converted,
-                                    it.fromCurrencyValue,
-                                    it.fromCurrency,
-                                    it.toCurrencyValue,
-                                    it.toCurrency,
-                                    it.commission,
-                                    it.fromCurrency
-                                )
-                        )
-                    )
-                    intermediateCurrencyExchangeState = null
-                } catch (e: Exception) {
-                    _events.send(
-                        ExchangeCurrencyContract.Event.ShowError(
-                            message = e.message ?: context.getString(
-                                R.string.not_supported_error
-                            )
-                        )
-                    )
-                } finally {
-                    _uiState.update { state ->
-                        state.copy(isLoading = false)
-                    }
-                }
-            }
         }
     }
 
@@ -277,30 +308,6 @@ class ExchangeCurrencyViewModel @Inject constructor(
         }
     }
 
-    fun forgetUserData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                _uiState.update { ExchangeCurrencyContract.UIState() }
-                forgetUserDataUseCase()
-                firstUserDataInitialization()
-                selectedCurrencyForSell = null
-                selectedCurrencyForBuy = null
-                selectedAmountForSell = null
-            } catch (e: Exception) {
-                _events.send(
-                    ExchangeCurrencyContract.Event.ShowError(
-                        message = e.message ?: context.getString(
-                            R.string.not_supported_error
-                        )
-                    )
-                )
-            } finally {
-                _uiState.update { state ->
-                    state.copy(isLoading = false)
-                }
-            }
-        }
-    }
 
     /* fun cancelSynchronization() {//for complicated cases
          if (synchronizedRatesJob?.isActive == true) {
