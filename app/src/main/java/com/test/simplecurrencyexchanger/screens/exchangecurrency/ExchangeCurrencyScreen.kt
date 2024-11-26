@@ -55,7 +55,6 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
 
     val dialogMessage = remember { mutableStateOf("") }
 
-
     LaunchedEffect(key1 = Unit) {
         viewModel.events.collectLatest {
             handleEvent(

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 @Composable
 fun BlockingProgressBar(show: Boolean = false) {
     if (show) {
+        val backgroundColorWithAlpha = MaterialTheme.colorScheme.secondary.copy(alpha = .3f)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -23,7 +24,7 @@ fun BlockingProgressBar(show: Boolean = false) {
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = { }
                 )
-                .background(MaterialTheme.colorScheme.secondary),
+                .background(backgroundColorWithAlpha),
             contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.onSecondary)

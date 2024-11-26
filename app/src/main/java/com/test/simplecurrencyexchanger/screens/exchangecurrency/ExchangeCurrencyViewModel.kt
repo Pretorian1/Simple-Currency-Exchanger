@@ -11,11 +11,14 @@ import com.test.core.domain.usecases.GetCurrencyExchangeRatesUseCase
 import com.test.core.domain.usecases.GetUserDataOrItFirstInitializationUseCase
 import com.test.core.domain.usecases.SaveUserDataAfterCurrencyExchangeUseCase
 import com.test.simplecurrencyexchanger.R
+import com.test.simplecurrencyexchanger.utils.extensions.launchPeriodic
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +35,7 @@ import javax.inject.Inject
 import kotlin.concurrent.Volatile
 
 private const val ANR_TIMEOUT = 5000L
+private const val RATES_SYNCHRONIZATION_TIMEOUT = 5000L
 private const val ONE_SECOND_IN_MILLISECONDS = 1000L
 
 @HiltViewModel
@@ -44,12 +48,14 @@ class ExchangeCurrencyViewModel @Inject constructor(
     private val forgetUserDataUseCase: ForgetUserDataUseCase
 ) : ViewModel() {
 
+    private val coroutineScopeIO = viewModelScope + Dispatchers.IO
+
     private val _uiState = MutableStateFlow(ExchangeCurrencyContract.UIState())
     val uiState: StateFlow<ExchangeCurrencyContract.UIState> = _uiState.onStart {
         firstUserDataInitialization()
         collectCurrencyAmount()
     }.stateIn(
-        viewModelScope + Dispatchers.IO,
+        coroutineScopeIO,
         SharingStarted.WhileSubscribed(ANR_TIMEOUT),
         ExchangeCurrencyContract.UIState(isLoading = true)
     )
@@ -73,8 +79,15 @@ class ExchangeCurrencyViewModel @Inject constructor(
         get() = synchronized(this) {
             return@synchronized field
         }
+    private var synchronizedRatesJob: Job? = null
+    private var synchronizationEnable = true
+
     private var availableCurrencies: List<String>? = null
     private var intermediateCurrencyExchangeState: CurrencyExchangeResult.Success? = null
+
+    init {
+        runRateSynchronization(synchronizationEnable)
+    }
 
 
     fun onCurrencyBalanceClicked(currency: String) {
@@ -249,8 +262,8 @@ class ExchangeCurrencyViewModel @Inject constructor(
                 if (result is CurrencyExchangeResult.Success)
                     intermediateCurrencyExchangeState = result
                 println(result)
+                delay(ONE_SECOND_IN_MILLISECONDS)
             }
-
         } catch (e: Exception) {
             _events.send(
                 ExchangeCurrencyContract.Event.ShowError(
@@ -286,6 +299,38 @@ class ExchangeCurrencyViewModel @Inject constructor(
                     state.copy(isLoading = false)
                 }
             }
+        }
+    }
+
+    /* fun cancelSynchronization() {//for complicated cases
+         if (synchronizedRatesJob?.isActive == true) {
+             synchronizedRatesJob?.cancel()
+         }
+     }*/
+
+    private fun runRateSynchronization(enable: Boolean) {
+        synchronizedRatesJob =
+            (coroutineScopeIO).launchPeriodic(
+                enable = enable,
+                repeatMillis = RATES_SYNCHRONIZATION_TIMEOUT
+            ) {
+                ratesSynchronization()
+            }
+    }
+
+    private suspend fun ratesSynchronization() {
+        try {
+            println("Run Synchronization")
+            val result = getCurrencyExchangeRatesUseCase()
+            if (result.rates != currencyExchangeRates?.rates) {
+                println("Not equal rates in synchronization")
+                currencyExchangeRates = result
+                availableCurrencies = result.rates.keys.toList()
+                _uiState.update { state -> state.copy(availableCurrenciesForExchanging = availableCurrencies!!) }
+            }
+        } catch (e: Exception) {
+            println("Error in synchronization")
+            println(e)
         }
     }
 
