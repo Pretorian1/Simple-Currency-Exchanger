@@ -89,7 +89,6 @@ class ExchangeCurrencyViewModel @Inject constructor(
         runRateSynchronization(synchronizationEnable)
     }
 
-
     fun onCurrencyBalanceClicked(currency: String) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { state -> state.copy(isLoading = true) }
@@ -104,7 +103,6 @@ class ExchangeCurrencyViewModel @Inject constructor(
             }
             calculateExchange()
         }
-
     }
 
     fun onCurrencyAmountChanged(amount: Double) {
@@ -308,7 +306,6 @@ class ExchangeCurrencyViewModel @Inject constructor(
         }
     }
 
-
     /* fun cancelSynchronization() {//for complicated cases
          if (synchronizedRatesJob?.isActive == true) {
              synchronizedRatesJob?.cancel()
@@ -367,7 +364,6 @@ class ExchangeCurrencyViewModel @Inject constructor(
                     )
                 }
             }
-
             is CurrencyExchangeResult.Failed -> {
                 _uiState.update { state ->
                     state.copy(
@@ -394,5 +390,4 @@ class ExchangeCurrencyViewModel @Inject constructor(
             }
         }
     }
-
 }

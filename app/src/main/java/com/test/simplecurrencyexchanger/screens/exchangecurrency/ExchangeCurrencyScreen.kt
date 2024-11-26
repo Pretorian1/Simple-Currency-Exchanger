@@ -48,7 +48,7 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel()) {
 
-    val uiState by viewModel.uiState.collectAsState()//WithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
 
     val openAlertDialogForgotUserData = remember { mutableStateOf(false) }
     val openInfoDialog = remember { mutableStateOf(false) }
@@ -111,8 +111,7 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
             }) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    //  tint = MaterialTheme.colorScheme.onPrimary,
-                    contentDescription = "Settings"
+                    contentDescription = stringResource(R.string.cd_forget_user_data)
                 )
             }
         })
@@ -129,11 +128,9 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
             Text(
                 text = stringResource(R.string.title_your_balance)
             )
-
             HorizontalDivider(
                 thickness = 1.dp,
             )
-
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(10.dp),
@@ -178,9 +175,7 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
 
         }
     }
-
     BlockingProgressBar(uiState.isLoading)
-
 }
 
 fun handleEvent(
@@ -203,4 +198,3 @@ fun handleEvent(
         }
     }
 }
-
