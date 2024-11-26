@@ -23,11 +23,18 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
+            manifestPlaceholders["applicationLabel"] = "@string/app_name"
+        }
+        debug {
+            applicationIdSuffix = ".debug"
+            manifestPlaceholders["applicationLabel"] = "@string/debug_app_name"
         }
     }
     compileOptions {
@@ -63,7 +70,7 @@ dependencies {
     implementation(libs.retrofit2)
     implementation(libs.retrofit2.gson.converter)
 
-    implementation(libs.leakcanary.android)
+    debugImplementation(libs.leakcanary.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

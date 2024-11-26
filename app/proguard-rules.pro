@@ -19,3 +19,23 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+-keepattributes *Annotation*
+
+-if interface * { @retrofit2.http.* <methods>; }
+-keep,allowobfuscation interface * extends <1>
+
+# R8 full mode strips generic signatures from return types if not kept.
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+
+-if interface * { @retrofit2.http.* public *** *(...); }
+-keep,allowoptimization,allowshrinking,allowobfuscation class <3>
+
+# If a class is used in some way by the application, and has fields annotated with @SerializedName
+# and a no-args constructor, keep those fields and the constructor
+-if class *
+-keepclasseswithmembers,allowobfuscation,allowoptimization class <1> {
+  <init>();
+  @com.google.gson.annotations.SerializedName <fields>;
+}
+
+-keep class com.test.core.domain.models.UserData { *; }
