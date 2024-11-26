@@ -16,9 +16,13 @@ import androidx.compose.ui.unit.dp
 import com.test.simplecurrencyexchanger.R
 import com.test.simplecurrencyexchanger.ui.compose.dropdownmenus.DropDownMenuBoxOutlined
 import com.test.simplecurrencyexchanger.ui.compose.textfields.SimpleDebouncingOutlinedTextField
+import com.test.simplecurrencyexchanger.ui.theme.Cinnabar
+import com.test.simplecurrencyexchanger.ui.theme.PaleGold
+import com.test.simplecurrencyexchanger.ui.theme.Silver
 
 @Composable
 fun CurrencyExchangeBlock(
+    isOperationSuccess: Boolean,
     fromCurrency: String,
     availableCurrencies: List<String>,
     tipSold: String? = null,
@@ -36,7 +40,10 @@ fun CurrencyExchangeBlock(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!tipSold.isNullOrEmpty()) Text(tipSold, modifier = Modifier.fillMaxWidth(.3f))
+            if (!tipSold.isNullOrEmpty()) Text(
+                text = tipSold, modifier = Modifier.fillMaxWidth(.3f),
+                color = if (isOperationSuccess) Silver else Cinnabar
+            )
             SimpleDebouncingOutlinedTextField(
                 modifier = Modifier.fillMaxWidth(.4f),
                 onInputChanged = onAmountChanged
@@ -51,7 +58,10 @@ fun CurrencyExchangeBlock(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!tipBought.isNullOrEmpty()) Text(tipBought, modifier = Modifier.fillMaxWidth(.3f))
+            if (!tipBought.isNullOrEmpty()) Text(
+                tipBought, modifier = Modifier.fillMaxWidth(.3f),
+                color = if (isOperationSuccess) PaleGold else Cinnabar
+            )
             if (availableCurrencies.isNotEmpty()) DropDownMenuBoxOutlined(
                 modifier = Modifier.fillMaxWidth(.5f),
                 availableCurrencies,

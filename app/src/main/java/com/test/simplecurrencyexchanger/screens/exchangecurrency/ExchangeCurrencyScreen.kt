@@ -147,6 +147,7 @@ fun ExchangeCurrencyScreen(viewModel: ExchangeCurrencyViewModel = hiltViewModel(
             }
             if (!uiState.selectedCurrencyForSold.isNullOrEmpty()) {
                 CurrencyExchangeBlock(
+                    isOperationSuccess = uiState.exchangeEnabled,
                     fromCurrency = uiState.selectedCurrencyForSold!!,
                     availableCurrencies = uiState.availableCurrenciesForExchanging,
                     tipSold = uiState.possibleSoldTip,
